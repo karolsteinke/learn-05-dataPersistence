@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 public class MainManager : MonoBehaviour
 {
@@ -11,17 +12,27 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text BestScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
     private int m_Points;
+    private int m_BestPoints = 0;
     
     private bool m_GameOver = false;
 
     
-    // Start is called before the first frame update
-    void Start()
-    {
+    void Awake() {
+        LoadBestScore();
+    }
+
+    /*
+    void OnExit() {
+        SaveBestScore();
+    }
+    */
+    
+    void Start() {
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -66,11 +77,48 @@ public class MainManager : MonoBehaviour
     {
         m_Points += point;
         ScoreText.text = $"Score : {m_Points}";
+        UpdateBestScore();
     }
 
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        SaveBestScore();
+    }
+
+    private void UpdateBestScore() {
+        if (m_Points > m_BestPoints) {
+            m_BestPoints = m_Points;
+            //format: "Best Score : Name : 0"
+            BestScoreText.text = "Best Score : " + Managers.Player.playerName + " : " + m_Points;
+        }
+    }
+
+    //(inner) SAVE CLASS - copies all parameters which have to be saved
+    [System.Serializable]
+    class SaveData {
+        public string bestScoreText;
+        public int bestPoints;
+    }
+
+    //METHODS to work with save class
+    public void SaveBestScore() {
+        SaveData data = new SaveData();
+        data.bestScoreText = BestScoreText.text;
+        data.bestPoints = m_BestPoints;
+        //json string and save it to file
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "learn-05-savefile.json", json);
+    }
+
+    public void LoadBestScore() {
+        string path = Application.persistentDataPath + "learn-05-savefile.json";
+        if (File.Exists(path)) {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            BestScoreText.text = data.bestScoreText;
+            m_BestPoints = data.bestPoints;
+        }
     }
 }
